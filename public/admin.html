@@ -7,22 +7,29 @@
   <style>
     body { font-family: Arial, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; color: #333; }
     h1, h2 { text-align: center; color: #1e7e34; }
-    .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .container { max-width: 950px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     .form-group { margin-bottom: 15px; }
     label { display: block; margin-bottom: 5px; font-weight: bold; }
     input[type="text"], input[type="file"], input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
     button { background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
     button:hover { background: #218838; }
+    
     .table-container { margin-top: 30px; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 14px; }
     th { background: #e9f5ed; color: #1e7e34; }
-    .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 50%; border: 1px solid #28a745; }
+    .thumb { width: 45px; height: 45px; object-fit: cover; border-radius: 50%; border: 1px solid #28a745; display: block; margin: 0 auto; }
 
-    /* DISEÑO DE CREDENCIAL EN DOS PÁGINAS (FRENTE Y VUELTA) */
-    .credencial-pagina {
-      width: 85.6mm;
-      height: 54mm;
+    /* BOTONES DE ACCIÓN */
+    .btn-accion { padding: 5px 8px; font-size: 11px; margin: 2px; border-radius: 3px; border: none; cursor: pointer; font-weight: bold; color: white; }
+    .btn-pdf { background: #28a745; }
+    .btn-estado { background: #ffc107; color: #333; }
+    .btn-borrar { background: #dc3545; }
+
+    /* DISEÑO DE CREDENCIAL VERTICAL DE 1 SOLA CARA (54mm x 85.6mm) */
+    #area-credencial {
+      width: 54mm;
+      height: 85.6mm;
       background: #ffffff;
       color: #333;
       box-sizing: border-box;
@@ -30,23 +37,18 @@
       border: 1.5mm solid #28a745; /* Contorno Verde */
       border-radius: 3mm;
       font-family: Arial, sans-serif;
-      position: relative;
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      text-align: center;
     }
-
-    /* FRENTE */
-    .cred-header { text-align: center; font-size: 8pt; font-weight: bold; color: #28a745; border-bottom: 1px solid #28a745; padding-bottom: 1mm; margin-bottom: 2mm; }
-    .cred-body-frente { display: flex; align-items: center; gap: 3mm; }
-    .cred-foto { width: 22mm; height: 26mm; object-fit: cover; border-radius: 2mm; border: 1.5px solid #28a745; }
-    .cred-info { flex: 1; font-size: 7.5pt; line-height: 1.3; }
-    .cred-info strong { font-size: 8pt; color: #1e7e34; }
-
-    /* VUELTA */
-    .cred-body-vuelta { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
-    .cred-qr { width: 26mm; height: 26mm; border: 1px solid #28a745; padding: 1mm; border-radius: 1mm; }
-    .cred-instrucciones { font-size: 6.5pt; color: #555; margin-top: 1.5mm; }
-
-    .html2pdf__page-break { page-break-after: always; }
+    .cred-header { font-size: 7.5pt; font-weight: bold; color: #28a745; border-bottom: 1px solid #28a745; width: 100%; padding-bottom: 1mm; }
+    .cred-foto { width: 22mm; height: 26mm; object-fit: cover; border-radius: 2mm; border: 1.5px solid #28a745; margin: 1mm 0; }
+    .cred-info { font-size: 7pt; line-height: 1.2; width: 100%; }
+    .cred-info strong { font-size: 7.5pt; color: #1e7e34; display: block; margin-bottom: 1px; }
+    .cred-qr { width: 22mm; height: 22mm; border: 1px solid #28a745; padding: 0.5mm; border-radius: 1mm; }
+    .cred-footer { font-size: 5.5pt; color: #666; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -78,9 +80,9 @@
       </div>
       <div class="form-group">
         <label>Clave de Administrador:</label>
-        <input type="password" id="clave" required>
+        <input type="password" id="clave" id="clave_admin" required>
       </div>
-      <button type="submit">Registrar y Generar Credencial (2 Páginas)</button>
+      <button type="submit">Registrar y Generar Credencial Vertical</button>
     </form>
 
     <div class="table-container">
@@ -101,38 +103,38 @@
     </div>
   </div>
 
-  <!-- PLANTILLA DE CREDENCIAL EN DOS PÁGINAS -->
+  <!-- PLANTILLA OCULTA DE CREDENCIAL VERTICAL (1 SOLA CARA) -->
   <div id="contenedor-oculto" style="position: absolute; left: -9999px; top: -9999px;">
     <div id="area-credencial">
-      <!-- PÁGINA 1: FRENTE -->
-      <div class="credencial-pagina">
-        <div class="cred-header">CONTROL DE ACCESO A BAÑOS</div>
-        <div class="cred-body-frente">
-          <img id="cred-img-foto" class="cred-foto" src="" alt="Foto Locatario">
-          <div class="cred-info">
-            <div><strong id="cred-txt-nombre">---</strong></div>
-            <div>Local: <span id="cred-txt-local">---</span></div>
-            <div>ID: <span id="cred-txt-id">---</span></div>
-            <div>Mes Activo: <span id="cred-txt-mes">---</span></div>
-          </div>
-        </div>
+      <div class="cred-header">CONTROL DE ACCESO A BAÑOS</div>
+      <img id="cred-img-foto" class="cred-foto" src="" alt="Foto">
+      <div class="cred-info">
+        <strong id="cred-txt-nombre">---</strong>
+        <div>Local: <span id="cred-txt-local">---</span></div>
+        <div>ID: <span id="cred-txt-id">---</span></div>
+        <div>Mes: <span id="cred-txt-mes">---</span></div>
       </div>
-
-      <div class="html2pdf__page-break"></div>
-
-      <!-- PÁGINA 2: VUELTA -->
-      <div class="credencial-pagina">
-        <div class="cred-header">CÓDIGO DE VALIDACIÓN</div>
-        <div class="cred-body-vuelta">
-          <img id="cred-img-qr" class="cred-qr" src="" alt="Código QR">
-          <div class="cred-instrucciones">Presente este código al oficial de seguridad para ingresar a las instalaciones.</div>
-        </div>
-      </div>
+      <img id="cred-img-qr" class="cred-qr" src="" alt="QR">
+      <div class="cred-footer">Validez sujeta a estado del mes activo</div>
     </div>
   </div>
 
   <script>
     const form = document.getElementById('registroForm');
+
+    // PRECARGA DE IMAGEN EN MEMORIA PARA EVITAR ERRORES DE CORS/IMAGEN INVISIBLE
+    function cargarImagenConCors(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => resolve(img.src);
+        img.onerror = () => {
+          // Si la precarga falla, devuelve la URL original de respaldo
+          resolve(url);
+        };
+        img.src = url + '?r=' + new Date().getTime(); // Anti-caché
+      });
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -150,7 +152,7 @@
         const data = await res.json();
 
         if (data.success) {
-          alert('¡Locatario registrado con éxito! Generando PDF de 2 páginas...');
+          alert('¡Locatario registrado con éxito! Generando PDF...');
           await descargarPDFCredencial(data.data);
           form.reset();
           cargarLocatarios();
@@ -168,20 +170,71 @@
       const tbody = document.getElementById('tablaLocatarios');
       tbody.innerHTML = '';
 
-      data.forEach(item => {
+      for (const item of data) {
+        // Se asegura que la foto sea accesible en el cliente
+        const fotoSegura = await cargarImagenConCors(item.foto);
+
         tbody.innerHTML += `
           <tr>
-            <td><img src="${item.foto}" class="thumb" alt="Foto"></td>
+            <td><img src="${fotoSegura}" class="thumb" alt="Foto"></td>
             <td>${item.nombre}</td>
             <td>${item.local}</td>
             <td>${item.mes_activo}</td>
             <td>${item.activo === 1 ? '✅ Activo' : '❌ Inactivo'}</td>
             <td>
-              <button onclick='reimprimirCredencial(${JSON.stringify(item)})' style="padding: 5px; font-size: 12px; background: #28a745;">Descargar PDF</button>
+              <button class="btn-accion btn-pdf" onclick='reimprimirCredencial(${JSON.stringify(item)})'>PDF</button>
+              <button class="btn-accion btn-estado" onclick='cambiarEstado(${item.id}, "${item.mes_activo}", ${item.activo})'>
+                ${item.activo === 1 ? 'Bloquear' : 'Activar'}
+              </button>
+              <button class="btn-accion btn-borrar" onclick='borrarLocatario(${item.id})'>Borrar</button>
             </td>
           </tr>
         `;
+      }
+    }
+
+    // ACCIÓN 1: RENOVAR / BLOQUEAR ACCESO AL MES
+    async function cambiarEstado(id, mesActual, estadoActual) {
+      const clave = prompt('Ingresa la Clave de Administrador:');
+      if (!clave) return;
+
+      const nuevoEstado = estadoActual === 1 ? 0 : 1;
+      const nuevoMes = nuevoEstado === 1 ? prompt('Ingresa el nuevo Mes Activo:', mesActual) : mesActual;
+
+      const res = await fetch('/api/renovar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, mes_activo: nuevoMes || mesActual, activo: nuevoEstado, clave })
       });
+
+      const data = await res.json();
+      if (data.success) {
+        alert('Estado del locatario actualizado correctamente.');
+        cargarLocatarios();
+      } else {
+        alert('Error: ' + data.error);
+      }
+    }
+
+    // ACCIÓN 2: BORRAR LOCATARIO
+    async function borrarLocatario(id) {
+      const clave = prompt('Ingresa la Clave de Administrador para eliminar el registro:');
+      if (!clave) return;
+
+      if (!confirm('¿Estás seguro de borrar a este locatario de forma definitiva?')) return;
+
+      const res = await fetch(`/api/locatarios/${id}`, {
+        method: 'DELETE',
+        headers: { 'x-admin-key': clave }
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert('Registro eliminado con éxito.');
+        cargarLocatarios();
+      } else {
+        alert('Error: ' + data.error);
+      }
     }
 
     async function reimprimirCredencial(locatario) {
@@ -207,7 +260,8 @@
       document.getElementById('cred-txt-id').textContent = datos.identificacion;
       document.getElementById('cred-txt-mes').textContent = datos.mes_activo;
 
-      document.getElementById('cred-img-foto').src = datos.foto;
+      const fotoSegura = await cargarImagenConCors(datos.foto);
+      document.getElementById('cred-img-foto').src = fotoSegura;
       document.getElementById('cred-img-qr').src = datos.qrImage;
 
       const contenedor = document.getElementById('contenedor-oculto');
@@ -222,7 +276,7 @@
         filename: `Credencial_${datos.nombre.replace(/\s+/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 1.0 },
         html2canvas: { scale: 3, useCORS: true, allowTaint: true },
-        jsPDF: { unit: 'mm', format: [85.6, 54], orientation: 'landscape' }
+        jsPDF: { unit: 'mm', format: [54, 85.6], orientation: 'portrait' } // Formato Vertical
       };
 
       await html2pdf().set(opciones).from(elemento).save();
@@ -236,4 +290,3 @@
   </script>
 </body>
 </html>
-
