@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Autoridad - Control de Gratuidad Baños</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 20px; background: #f4f5f7; display: flex; gap: 20px; flex-wrap: wrap; }
+    .panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); flex: 1; min-width: 320px; }
+    form { display: grid; gap: 10px; }
+    input, button { padding: 10px; font-size: 1rem; border: 1px solid #ccc; border-radius: 4px; }
+    button { background: #0066cc; color: white; border: none; cursor: pointer; font-weight: bold; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
+    
+    .btn-renovar { background: #0066cc; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; }
+    .btn-borrar { background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; margin-left: 5px; }
+    .btn-pdf { background: #28a745; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+    
+    .credencial-box {
+      border: 2px solid #0066cc;
+      border-radius: 12px;
+      width: 300px;
+      padding: 15px;
+      background: #ffffff;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      margin: 15px auto;
+    }
+    .credencial-header { background: #0066cc; color: white; padding: 8px; border-radius: 6px; font-size: 0.9rem; font-weight: bold; text-transform: uppercase; }
+    .credencial-foto { width: 105px; height: 105px; border-radius: 50%; object-fit: cover; margin: 10px 0; border: 3px solid #0066cc; }
+    .credencial-qr { width: 125px; height: 125px; margin-top: 5px; }
+    .token-text { font-family: monospace; font-size: 0.85rem; color: #333; background: #eee; padding: 3px 8px; border-radius: 4px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="panel">
+    <h2>Registrar Locatario</h2>
+    <form id="formRegistro" enctype="multipart/form-data">
+      <input type="password" id="clave" placeholder="Contraseña de Administrador" required>
+      <input type="text" id="nombre" placeholder="Nombre Completo" required>
+      <input type="text" id="local" placeholder="Local Comercial (ej. L-14)" required>
+      <input type="text" id="identificacion" placeholder="DNI / RUT / Identificación" required>
+      <input type="text" id="mes_activo" placeholder="Mes de Vigencia" value="Septiembre 2026" required>
+      <label>Foto Oficial del Titular:</label>
+      <input type="file" id="foto" accept="image/*" required>
+      <button type="submit">Generar Credencial Digital</button>
+    </form>
+  </div>
+
+  <div class="panel" style="text-align:center;">
+    <h2>Credencial Generada</h2>
+    <div id="vistaCredencial">
+      <p style="color: #777;">Llena el formulario para emitir una credencial digital.</p>
+    </div>
+  </div>
+
+  <div class="panel" style="width: 100%;">
+    <h2>Control de Locatarios Registrados</h2>
+    <table id="tablaLocatarios">
+      <thead>
+        <tr>
+          <th>Foto</th>
+          <th>Nombre</th>
+          <th>Local</th>
+          <th>Código Token</th>
+          <th>Mes Activo</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    async function cargarLocatarios() {
+      const res = await fetch('/api/locatarios');
+      const data = await res.json();
+      const tbody = document.querySelector('#tablaLocatarios tbody');
+      tbody.innerHTML = '';
+      data.forEach(item => {
+        tbody.innerHTML += `
+          <tr>
+            <td><img src="${item.foto}" width="40" height="40" style="object-fit:cover; border-radius:50%"></td>
+            <td>${item.nombre}</td>
+            <td>${item.local}</td>
+            <td><span class="token-text">${item.token}</span></td>
+            <td>${item.mes_activo}</td>
+            <td><strong style="color: ${item.activo ? 'green' : 'red'}">${item.activo ? 'ACTIVO' : 'INACTIVO'}</strong></td>
+            <td>
+              <button class="btn-renovar" onclick="renovar(${item.id}, ${item.activo ? 0 : 1})">
+                ${item.activo ? 'Desactivar' : 'Renovar'}
+              </button>
+              <button class="btn-borrar" onclick="eliminar(${item.id}, '${item.nombre}')">Borrar</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    document.getElementById('formRegistro').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData();
+      formData.append('clave', document.getElementById('clave').value);
+      formData.append('nombre', document.getElementById('nombre').value);
+      formData.append('local', document.getElementById('local').value);
+      formData.append('identificacion', document.getElementById('identificacion').value);
+      formData.append('mes_activo', document.getElementById('mes_activo').value);
+      formData.append('foto', document.getElementById('foto').files[0]);
+
+      const res = await fetch('/api/registrar', { method: 'POST', body: formData });
+      const result = await res.json();
+      
+      if(result.error) {
+        alert(result.error);
+        return;
+      }
+
+      if(result.success) {
+        const d = result.data;
+        document.getElementById('vistaCredencial').innerHTML = `
+          <div class="credencial-box" id="tarjetaImprimir">
+            <div class="credencial-header">PASE DE ACCESO GRATUITO</div>
+            <img src="${d.foto}" class="credencial-foto"><br>
+            <strong style="font-size: 1.1rem; color:#111;">${d.nombre}</strong><br>
+            <small style="color:#555;">Local: ${d.local} | ID: ${d.identificacion}</small><br>
+            <img src="${d.qrImage}" class="credencial-qr"><br>
+            <span class="token-text">${d.token}</span>
+          </div>
+          <button class="btn-pdf" onclick="descargarPDF('${d.nombre}')">Descargar Credencial (PDF)</button>
+        `;
+        document.getElementById('formRegistro').reset();
+        cargarLocatarios();
+      }
+    });
+
+    function descargarPDF(nombrePersona) {
+      const elemento = document.getElementById('tarjetaImprimir');
+      const opciones = {
+        margin:       10,
+        filename:     `Credencial_${nombrePersona.replace(/\s+/g, '_')}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' }
+      };
+      html2pdf().set(opciones).from(elemento).save();
+    }
+
+    async function renovar(id, estado) {
+      const clave = prompt("Ingresa la Contraseña de Administrador:");
+      if(!clave) return;
+      const mes = prompt("Ingresa el Mes de Vigencia:", "Septiembre 2026");
+      if(mes) {
+        const res = await fetch('/api/renovar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, mes_activo: mes, activo: estado, clave })
+        });
+        const data = await res.json();
+        if(data.error) alert(data.error);
+        else cargarLocatarios();
+      }
+    }
+
+    async function eliminar(id, nombre) {
+      const clave = prompt("Ingresa la Contraseña de Administrador para borrar:");
+      if(!clave) return;
+      if(confirm(`¿Estás seguro de que deseas borrar el registro de "${nombre}"?`)) {
+        const res = await fetch(`/api/locatarios/${id}`, { 
+          method: 'DELETE',
+          headers: { 'x-admin-key': clave }
+        });
+        const data = await res.json();
+        if(data.error) alert(data.error);
+        else cargarLocatarios();
+      }
+    }
+
+    cargarLocatarios();
+  </script>
+</body>
+</html>

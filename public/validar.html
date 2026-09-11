@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Validación de Acceso</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; text-align: center; padding: 20px; margin: 0; }
+    .status-box { padding: 20px; border-radius: 12px; color: white; margin-bottom: 20px; }
+    .permitido { background-color: #28a745; }
+    .denegado { background-color: #dc3545; }
+    .avatar { width: 180px; height: 180px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+    .info { font-size: 1.2rem; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div id="pantalla">Verificando credencial...</div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    async function validar() {
+      const res = await fetch(`/api/validar/${token}`);
+      const data = await res.json();
+      const contenedor = document.getElementById('pantalla');
+
+      if (!data.valido) {
+        contenedor.innerHTML = `
+          <div class="status-box denegado">
+            <h1>DENEGADO / PASE VENCIDO</h1>
+            <p>Este pase no se encuentra activo o requiere renovación mensual.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const loc = data.locatario;
+      contenedor.innerHTML = `
+        <div class="status-box permitido">
+          <h1>ACCESO PERMITIDO</h1>
+          <p>MES ACTIVO: ${loc.mes_activo}</p>
+        </div>
+        <img src="${loc.foto}" class="avatar" alt="Foto Oficial">
+        <div class="info">
+          <h2>${loc.nombre}</h2>
+          <p><strong>Local:</strong> ${loc.local}</p>
+          <p><strong>Identificación:</strong> ${loc.identificacion}</p>
+        </div>
+      `;
+    }
+
+    if (token) validar();
+  </script>
+</body>
+</html>
