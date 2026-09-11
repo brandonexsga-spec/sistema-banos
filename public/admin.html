@@ -42,6 +42,7 @@
       align-items: center;
       justify-content: space-between;
       text-align: center;
+      margin: 0;
     }
     .cred-header { font-size: 7.5pt; font-weight: bold; color: #28a745; border-bottom: 1px solid #28a745; width: 100%; padding-bottom: 1mm; }
     .cred-foto { width: 22mm; height: 26mm; object-fit: cover; border-radius: 2mm; border: 1.5px solid #28a745; margin: 1mm 0; }
@@ -103,8 +104,8 @@
     </div>
   </div>
 
-  <!-- PLANTILLA OCULTA DE CREDENCIAL VERTICAL (1 SOLA CARA) -->
-  <div id="contenedor-oculto" style="position: absolute; left: -9999px; top: -9999px;">
+  <!-- PLANTILLA OCULTA FIXEADA (PREVIENE RECORTES POR SCROLL O RENDER) -->
+  <div id="contenedor-oculto" style="position: fixed; left: -9999px; top: 0; width: 54mm; height: 85.6mm; z-index: -9999;">
     <div id="area-credencial">
       <div class="cred-header">CONTROL DE ACCESO A BAÑOS</div>
       <img id="cred-img-foto" class="cred-foto" src="" alt="Foto">
@@ -135,7 +136,7 @@
         });
       } catch (e) {
         console.error("Error al convertir foto:", e);
-        return url; // Retorno de respaldo
+        return url;
       }
     }
 
@@ -266,10 +267,8 @@
       document.getElementById('cred-img-foto').src = fotoBase64;
       document.getElementById('cred-img-qr').src = datos.qrImage;
 
-      const contenedor = document.getElementById('contenedor-oculto');
-      contenedor.style.position = 'static';
-      contenedor.style.left = '0';
-      contenedor.style.top = '0';
+      // Esperar brevemente a que las imágenes en el DOM terminen de asignarse
+      await new Promise(r => setTimeout(r, 200));
 
       const elemento = document.getElementById('area-credencial');
 
@@ -277,15 +276,19 @@
         margin: 0,
         filename: `Credencial_${datos.nombre.replace(/\s+/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 1.0 },
-        html2canvas: { scale: 3, useCORS: true, allowTaint: true },
-        jsPDF: { unit: 'mm', format: [54, 85.6], orientation: 'portrait' } // Formato Vertical (CR80)
+        html2canvas: { 
+          scale: 3, 
+          useCORS: true, 
+          allowTaint: true,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: document.documentElement.offsetWidth,
+          windowHeight: document.documentElement.offsetHeight
+        },
+        jsPDF: { unit: 'mm', format: [54, 85.6], orientation: 'portrait' }
       };
 
       await html2pdf().set(opciones).from(elemento).save();
-
-      contenedor.style.position = 'absolute';
-      contenedor.style.left = '-9999px';
-      contenedor.style.top = '-9999px';
     }
 
     cargarLocatarios();
