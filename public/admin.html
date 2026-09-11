@@ -80,7 +80,7 @@
       </div>
       <div class="form-group">
         <label>Clave de Administrador:</label>
-        <input type="password" id="clave" id="clave_admin" required>
+        <input type="password" id="clave" required>
       </div>
       <button type="submit">Registrar y Generar Credencial Vertical</button>
     </form>
@@ -122,18 +122,21 @@
   <script>
     const form = document.getElementById('registroForm');
 
-    // PRECARGA DE IMAGEN EN MEMORIA PARA EVITAR ERRORES DE CORS/IMAGEN INVISIBLE
-    function cargarImagenConCors(url) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.onload = () => resolve(img.src);
-        img.onerror = () => {
-          // Si la precarga falla, devuelve la URL original de respaldo
-          resolve(url);
-        };
-        img.src = url + '?r=' + new Date().getTime(); // Anti-caché
-      });
+    // CONVERSIÓN DIRECTA A BASE64 PARA EVITAR BLOQUEOS DE CORS E IMÁGENES INVISIBLES
+    async function obtenerFotoBase64(url) {
+      if (!url) return '';
+      try {
+        const res = await fetch(url, { mode: 'cors' });
+        const blob = await res.blob();
+        return new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      } catch (e) {
+        console.error("Error al convertir foto:", e);
+        return url; // Retorno de respaldo
+      }
     }
 
     form.addEventListener('submit', async (e) => {
@@ -171,12 +174,11 @@
       tbody.innerHTML = '';
 
       for (const item of data) {
-        // Se asegura que la foto sea accesible en el cliente
-        const fotoSegura = await cargarImagenConCors(item.foto);
+        const fotoBase64 = await obtenerFotoBase64(item.foto);
 
         tbody.innerHTML += `
           <tr>
-            <td><img src="${fotoSegura}" class="thumb" alt="Foto"></td>
+            <td><img src="${fotoBase64}" class="thumb" alt="Foto"></td>
             <td>${item.nombre}</td>
             <td>${item.local}</td>
             <td>${item.mes_activo}</td>
@@ -193,7 +195,7 @@
       }
     }
 
-    // ACCIÓN 1: RENOVAR / BLOQUEAR ACCESO AL MES
+    // ACCIÓN: BLOQUEAR O RENOVAR MES
     async function cambiarEstado(id, mesActual, estadoActual) {
       const clave = prompt('Ingresa la Clave de Administrador:');
       if (!clave) return;
@@ -216,7 +218,7 @@
       }
     }
 
-    // ACCIÓN 2: BORRAR LOCATARIO
+    // ACCIÓN: ELIMINAR LOCATARIO
     async function borrarLocatario(id) {
       const clave = prompt('Ingresa la Clave de Administrador para eliminar el registro:');
       if (!clave) return;
@@ -260,8 +262,8 @@
       document.getElementById('cred-txt-id').textContent = datos.identificacion;
       document.getElementById('cred-txt-mes').textContent = datos.mes_activo;
 
-      const fotoSegura = await cargarImagenConCors(datos.foto);
-      document.getElementById('cred-img-foto').src = fotoSegura;
+      const fotoBase64 = await obtenerFotoBase64(datos.foto);
+      document.getElementById('cred-img-foto').src = fotoBase64;
       document.getElementById('cred-img-qr').src = datos.qrImage;
 
       const contenedor = document.getElementById('contenedor-oculto');
@@ -276,7 +278,7 @@
         filename: `Credencial_${datos.nombre.replace(/\s+/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 1.0 },
         html2canvas: { scale: 3, useCORS: true, allowTaint: true },
-        jsPDF: { unit: 'mm', format: [54, 85.6], orientation: 'portrait' } // Formato Vertical
+        jsPDF: { unit: 'mm', format: [54, 85.6], orientation: 'portrait' } // Formato Vertical (CR80)
       };
 
       await html2pdf().set(opciones).from(elemento).save();

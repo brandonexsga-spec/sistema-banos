@@ -42,31 +42,31 @@ app.post('/api/registrar', upload.single('foto'), async (req, res) => {
     }
 
     const uploadStream = cloudinary.uploader.upload_stream(
-      { folder: 'sistema-banos' },
-      async (error, result) => {
-        if (error) return res.status(500).json({ error: 'Error al subir la imagen a Cloudinary.' });
+  { folder: 'sistema-banos', format: 'jpg' }, // Forzar formato .jpg
+  async (error, result) => {
+    if (error) return res.status(500).json({ error: 'Error al subir la imagen a Cloudinary.' });
 
-        const token = 'LOC-' + Math.random().toString(36).substr(2, 8).toUpperCase();
-        const fotoUrl = result.secure_url;
+    const token = 'LOC-' + Math.random().toString(36).substr(2, 8).toUpperCase();
+    const fotoUrl = result.secure_url;
 
-        const { data, error: dbError } = await supabase
-          .from('locatarios')
-          .insert([{ token, nombre, local, identificacion, foto: fotoUrl, mes_activo, activo: 1 }])
-          .select();
+    const { data, error: dbError } = await supabase
+      .from('locatarios')
+      .insert([{ token, nombre, local, identificacion, foto: fotoUrl, mes_activo, activo: 1 }])
+      .select();
 
-        if (dbError) return res.status(500).json({ error: dbError.message });
+    if (dbError) return res.status(500).json({ error: dbError.message });
 
-        const host = req.get('host');
-        const protocol = req.protocol;
-        const validacionUrl = `${protocol}://${host}/validar.html?token=${token}`;
-        const qrImage = await QRCode.toDataURL(validacionUrl);
+    const host = req.get('host');
+    const protocol = req.protocol;
+    const validacionUrl = `${protocol}://${host}/validar.html?token=${token}`;
+    const qrImage = await QRCode.toDataURL(validacionUrl);
 
-        res.json({
-          success: true,
-          data: { id: data[0].id, token, nombre, local, identificacion, foto: fotoUrl, mes_activo, qrImage }
-        });
-      }
-    );
+    res.json({
+      success: true,
+      data: { id: data[0].id, token, nombre, local, identificacion, foto: fotoUrl, mes_activo, qrImage }
+    });
+  }
+);
 
     uploadStream.end(req.file.buffer);
   } catch (e) {
