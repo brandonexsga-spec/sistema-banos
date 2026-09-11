@@ -6,38 +6,47 @@
   <title>Administración - Control de Baños</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f4f7f6; margin: 0; padding: 20px; color: #333; }
-    h1, h2 { text-align: center; }
+    h1, h2 { text-align: center; color: #1e7e34; }
     .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
     .form-group { margin-bottom: 15px; }
     label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input[type="text"], input[type="file"], input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; }
-    button { background: #007bff; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; }
-    button:hover { background: #0056b3; }
+    input[type="text"], input[type="file"], input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    button { background: #28a745; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; }
+    button:hover { background: #218838; }
     .table-container { margin-top: 30px; overflow-x: auto; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; }
     th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-    th { background: #f8f9fa; }
-    .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 50%; }
-    
-    /* DISEÑO EXACTO DE LA CREDENCIAL (TAMAÑO CR80: 85.6mm x 54mm) */
-    #area-credencial {
-      display: none;
+    th { background: #e9f5ed; color: #1e7e34; }
+    .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 50%; border: 1px solid #28a745; }
+
+    /* DISEÑO DE CREDENCIAL EN DOS PÁGINAS (FRENTE Y VUELTA) */
+    .credencial-pagina {
       width: 85.6mm;
       height: 54mm;
-      background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
-      color: white;
+      background: #ffffff;
+      color: #333;
       box-sizing: border-box;
-      padding: 4mm;
+      padding: 3mm;
+      border: 1.5mm solid #28a745; /* Contorno Verde */
       border-radius: 3mm;
-      position: relative;
       font-family: Arial, sans-serif;
+      position: relative;
+      overflow: hidden;
     }
-    .cred-header { text-align: center; font-size: 9pt; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.3); padding-bottom: 1mm; margin-bottom: 2mm; }
-    .cred-body { display: flex; align-items: center; justify-content: space-between; gap: 3mm; }
-    .cred-foto { width: 22mm; height: 26mm; object-fit: cover; border-radius: 2mm; border: 1.5px solid #fff; background: #fff; }
-    .cred-info { flex: 1; font-size: 7.5pt; line-height: 1.2; }
-    .cred-info strong { font-size: 8pt; color: #ffd700; }
-    .cred-qr { width: 22mm; height: 22mm; background: #fff; padding: 1mm; border-radius: 1mm; }
+
+    /* FRENTE */
+    .cred-header { text-align: center; font-size: 8pt; font-weight: bold; color: #28a745; border-bottom: 1px solid #28a745; padding-bottom: 1mm; margin-bottom: 2mm; }
+    .cred-body-frente { display: flex; align-items: center; gap: 3mm; }
+    .cred-foto { width: 22mm; height: 26mm; object-fit: cover; border-radius: 2mm; border: 1.5px solid #28a745; }
+    .cred-info { flex: 1; font-size: 7.5pt; line-height: 1.3; }
+    .cred-info strong { font-size: 8pt; color: #1e7e34; }
+
+    /* VUELTA */
+    .cred-body-vuelta { text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+    .cred-qr { width: 26mm; height: 26mm; border: 1px solid #28a745; padding: 1mm; border-radius: 1mm; }
+    .cred-instrucciones { font-size: 6.5pt; color: #555; margin-top: 1.5mm; }
+
+    .html2pdf__page-break { page-break-after: always; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -71,7 +80,7 @@
         <label>Clave de Administrador:</label>
         <input type="password" id="clave" required>
       </div>
-      <button type="submit">Registrar y Generar Credencial</button>
+      <button type="submit">Registrar y Generar Credencial (2 Páginas)</button>
     </form>
 
     <div class="table-container">
@@ -92,35 +101,38 @@
     </div>
   </div>
 
-  <!-- PLANTILLA OCULTA DE CREDENCIAL -->
+  <!-- PLANTILLA DE CREDENCIAL EN DOS PÁGINAS -->
   <div id="contenedor-oculto" style="position: absolute; left: -9999px; top: -9999px;">
     <div id="area-credencial">
-      <div class="cred-header">ACCESO A BAÑOS - CREDENCIAL</div>
-      <div class="cred-body">
-        <img id="cred-img-foto" class="cred-foto" crossorigin="anonymous" src="" alt="Foto">
-        <div class="cred-info">
-          <div><strong id="cred-txt-nombre">---</strong></div>
-          <div>Local: <span id="cred-txt-local">---</span></div>
-          <div>ID: <span id="cred-txt-id">---</span></div>
-          <div>Mes: <span id="cred-txt-mes">---</span></div>
+      <!-- PÁGINA 1: FRENTE -->
+      <div class="credencial-pagina">
+        <div class="cred-header">CONTROL DE ACCESO A BAÑOS</div>
+        <div class="cred-body-frente">
+          <img id="cred-img-foto" class="cred-foto" src="" alt="Foto Locatario">
+          <div class="cred-info">
+            <div><strong id="cred-txt-nombre">---</strong></div>
+            <div>Local: <span id="cred-txt-local">---</span></div>
+            <div>ID: <span id="cred-txt-id">---</span></div>
+            <div>Mes Activo: <span id="cred-txt-mes">---</span></div>
+          </div>
         </div>
-        <img id="cred-img-qr" class="cred-qr" src="" alt="QR">
+      </div>
+
+      <div class="html2pdf__page-break"></div>
+
+      <!-- PÁGINA 2: VUELTA -->
+      <div class="credencial-pagina">
+        <div class="cred-header">CÓDIGO DE VALIDACIÓN</div>
+        <div class="cred-body-vuelta">
+          <img id="cred-img-qr" class="cred-qr" src="" alt="Código QR">
+          <div class="cred-instrucciones">Presente este código al oficial de seguridad para ingresar a las instalaciones.</div>
+        </div>
       </div>
     </div>
   </div>
 
   <script>
     const form = document.getElementById('registroForm');
-
-    async function urlToBase64(url) {
-      const response = await fetch(url);
-      const blob = await response.blob();
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.readAsDataURL(blob);
-      });
-    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -138,7 +150,7 @@
         const data = await res.json();
 
         if (data.success) {
-          alert('¡Locatario registrado con éxito! Generando credencial...');
+          alert('¡Locatario registrado con éxito! Generando PDF de 2 páginas...');
           await descargarPDFCredencial(data.data);
           form.reset();
           cargarLocatarios();
@@ -159,13 +171,13 @@
       data.forEach(item => {
         tbody.innerHTML += `
           <tr>
-            <td><img src="${item.foto}" class="thumb" crossorigin="anonymous" alt="Foto"></td>
+            <td><img src="${item.foto}" class="thumb" alt="Foto"></td>
             <td>${item.nombre}</td>
             <td>${item.local}</td>
             <td>${item.mes_activo}</td>
             <td>${item.activo === 1 ? '✅ Activo' : '❌ Inactivo'}</td>
             <td>
-              <button onclick='reimprimirCredencial(${JSON.stringify(item)})' style="padding: 5px; font-size: 12px;">Descargar PDF</button>
+              <button onclick='reimprimirCredencial(${JSON.stringify(item)})' style="padding: 5px; font-size: 12px; background: #28a745;">Descargar PDF</button>
             </td>
           </tr>
         `;
@@ -177,11 +189,7 @@
       const protocol = window.location.protocol;
       const validacionUrl = `${protocol}//${host}/validar.html?token=${locatario.token}`;
       
-      const qrRes = await fetch(`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(validacionUrl)}`);
-      const qrBlob = await qrRes.blob();
-      const qrBase64 = await new Promise((res) => {
-        const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(qrBlob);
-      });
+      const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(validacionUrl)}`;
 
       descargarPDFCredencial({
         nombre: locatario.nombre,
@@ -189,7 +197,7 @@
         identificacion: locatario.identificacion,
         mes_activo: locatario.mes_activo,
         foto: locatario.foto,
-        qrImage: qrBase64
+        qrImage: qrImage
       });
     }
 
@@ -199,26 +207,33 @@
       document.getElementById('cred-txt-id').textContent = datos.identificacion;
       document.getElementById('cred-txt-mes').textContent = datos.mes_activo;
 
-      const fotoBase64 = await urlToBase64(datos.foto);
-      document.getElementById('cred-img-foto').src = fotoBase64;
+      document.getElementById('cred-img-foto').src = datos.foto;
       document.getElementById('cred-img-qr').src = datos.qrImage;
 
+      const contenedor = document.getElementById('contenedor-oculto');
+      contenedor.style.position = 'static';
+      contenedor.style.left = '0';
+      contenedor.style.top = '0';
+
       const elemento = document.getElementById('area-credencial');
-      elemento.style.display = 'block';
 
       const opciones = {
         margin: 0,
-        filename: `Credencial_${datos.nombre.replace(/\\s+/g, '_')}.pdf`,
+        filename: `Credencial_${datos.nombre.replace(/\s+/g, '_')}.pdf`,
         image: { type: 'jpeg', quality: 1.0 },
-        html2canvas: { scale: 3, useCORS: true, logging: false },
+        html2canvas: { scale: 3, useCORS: true, allowTaint: true },
         jsPDF: { unit: 'mm', format: [85.6, 54], orientation: 'landscape' }
       };
 
       await html2pdf().set(opciones).from(elemento).save();
-      elemento.style.display = 'none';
+
+      contenedor.style.position = 'absolute';
+      contenedor.style.left = '-9999px';
+      contenedor.style.top = '-9999px';
     }
 
     cargarLocatarios();
   </script>
 </body>
 </html>
+
